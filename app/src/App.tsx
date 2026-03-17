@@ -2883,16 +2883,7 @@ export default function App({ thirdwebClient }: AppProps) {
         <header className="header">
           <div className="header-container">
             <div className="header-logo">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#logo-gradient)" strokeWidth="2.5" strokeLinecap="round" className="loom-logo-icon">
-                <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(45 12 12)"/>
-                <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-45 12 12)"/>
-                <defs>
-                  <linearGradient id="logo-gradient" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#34d399" />
-                    <stop offset="1" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
+              <img src="/lectern.png" alt="Lectern" className="logo-image" />
               <h1>Lectern</h1>
             </div>
             <div className="header-actions">
@@ -3141,16 +3132,7 @@ export default function App({ thirdwebClient }: AppProps) {
       <header className="header">
         <div className="header-container">
           <div className="header-logo">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#logo-gradient)" strokeWidth="2.5" strokeLinecap="round" className="loom-logo-icon">
-              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(45 12 12)"/>
-              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-45 12 12)"/>
-              <defs>
-                <linearGradient id="logo-gradient" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#34d399" />
-                  <stop offset="1" stopColor="#a855f7" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="/lectern.png" alt="Lectern" className="logo-image" />
             <h1>Lectern</h1>
           </div>
           <div className="header-actions">

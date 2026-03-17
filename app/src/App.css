@@ -59,10 +59,7 @@
   margin: 0;
 }
 
-.loom-logo-icon {
-  width: 2rem;
-  height: 2rem;
-}
+/* Lectern logo image (see .logo-image) */
 
 .header-actions {
   display: flex;
