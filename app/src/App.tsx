@@ -6,7 +6,15 @@ import { NotificationButton } from "./components/NotificationButton";
 import { NotificationToasts } from "./components/NotificationCenter";
 import { IPPortfolio } from "./components/IPPortfolio";
 import "./components/IPPortfolio.css";
-import { createPublicClient, http } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  encodeFunctionData,
+  http,
+  custom,
+  parseEther,
+  formatEther,
+} from "viem";
 import {
   defineChain,
   getContract,
@@ -18,7 +26,6 @@ import {
 } from "thirdweb";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
-import { parseEther, formatEther } from "viem";
 import CONTRACT_ADDRESS_JSON from "./deployed_addresses.json";
 
 // Type assertion to include the ModredIP contract address
@@ -31,14 +38,16 @@ type ContractAddresses = {
 const CONTRACT_ADDRESSES = CONTRACT_ADDRESS_JSON as ContractAddresses;
 const MODRED_IP_ADDRESS = CONTRACT_ADDRESSES["ModredIPModule#ModredIP"] as `0x${string}`;
 
-// Viem public client for Polkadot Hub (reliable RPC reads for IP assets list; avoids Thirdweb "No response" issues)
+// Polkadot Hub chain for viem (reliable RPC for reads and for broadcasting signed txs)
+const polkadotHubChain = {
+  id: 420420417,
+  name: "Polkadot Hub Testnet",
+  nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
+  rpcUrls: { default: { http: ["https://services.polkadothub-rpc.com/testnet"] } },
+} as const;
+
 const polkadotHubPublicClient = createPublicClient({
-  chain: {
-    id: 420420417,
-    name: "Polkadot Hub Testnet",
-    nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
-    rpcUrls: { default: { http: ["https://services.polkadothub-rpc.com/testnet"] } },
-  },
+  chain: polkadotHubChain,
   transport: http("https://services.polkadothub-rpc.com/testnet"),
 });
 
@@ -1877,46 +1886,56 @@ export default function App({ thirdwebClient }: AppProps) {
       
       notifyInfo('Processing Payment', `Paying ${paymentAmount} PAS in revenue...`);
 
-      const contract = getContract({
-        abi: MODRED_IP_ABI,
-        client: thirdwebClient,
-        chain: defineChain(polkadotHubTestnet.id),
-        address: CONTRACT_ADDRESSES["ModredIPModule#ModredIP"],
-      });
+      // Use viem + Polkadot Hub RPC: prepare tx with our client, sign with wallet, broadcast with our client (avoids Thirdweb "No response")
+      const ethereum = typeof window !== "undefined" ? (window as unknown as { ethereum?: unknown }).ethereum : null;
+      if (!ethereum) throw new Error("No wallet found. Please install MetaMask or another Web3 wallet.");
 
-      const maxTries = 3;
-      let lastError: unknown;
-      for (let tryCount = 1; tryCount <= maxTries; tryCount++) {
-        try {
-          const preparedCall = await prepareContractCall({
-            contract,
-            method: "payRevenue",
-            params: [BigInt(paymentTokenId)],
-            value: parseEther(paymentAmount),
-          });
-          const transaction = await sendTransaction({
-            transaction: preparedCall,
-            account: account,
-          });
-          await waitForReceipt({
-            client: thirdwebClient,
-            chain: defineChain(polkadotHubTestnet.id),
-            transactionHash: transaction.transactionHash,
-          });
-          lastError = null;
-          break;
-        } catch (err: any) {
-          lastError = err;
-          const msg = err?.message || err?.shortMessage || String(err || "");
-          const isNoResponse = msg.includes("No response") || msg.includes("fetch failed") || msg.includes("timeout");
-          if (isNoResponse && tryCount < maxTries) {
-            await new Promise((r) => setTimeout(r, 1500 * tryCount));
-            continue;
-          }
-          throw err;
-        }
-      }
-      if (lastError) throw lastError;
+      const data = encodeFunctionData({
+        abi: MODRED_IP_ABI,
+        functionName: "payRevenue",
+        args: [BigInt(paymentTokenId)],
+      });
+      const value = parseEther(paymentAmount);
+
+      const gas = await polkadotHubPublicClient.estimateContractGas({
+        address: MODRED_IP_ADDRESS,
+        abi: MODRED_IP_ABI,
+        functionName: "payRevenue",
+        args: [BigInt(paymentTokenId)],
+        value,
+        account: account.address as `0x${string}`,
+      });
+      const nonce = await polkadotHubPublicClient.getTransactionCount({
+        address: account.address as `0x${string}`,
+      });
+      const feeData = await polkadotHubPublicClient.estimateFeesPerGas().catch(() => null);
+      const maxFeePerGas = feeData?.maxFeePerGas ?? BigInt(2e9);
+      const maxPriorityFeePerGas = feeData?.maxPriorityFeePerGas ?? BigInt(2e9);
+
+      const request = {
+        to: MODRED_IP_ADDRESS,
+        data,
+        value,
+        gas,
+        nonce,
+        chainId: polkadotHubChain.id,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+      };
+
+      const walletClient = createWalletClient({
+        chain: polkadotHubChain,
+        transport: custom(ethereum as import("viem").EIP1193Provider),
+      });
+      const jsonRpcAccount = { address: account.address as `0x${string}`, type: "json-rpc" as const };
+      const serializedTx = await walletClient.signTransaction({
+        account: jsonRpcAccount,
+        ...request,
+      });
+      const hash = await polkadotHubPublicClient.sendRawTransaction({
+        serializedTransaction: serializedTx,
+      });
+      await polkadotHubPublicClient.waitForTransactionReceipt({ hash });
 
       // Show success notification
       notifySuccess('Payment Successful', `Successfully paid ${paymentAmount} PAS in revenue!`);
@@ -1938,7 +1957,7 @@ export default function App({ thirdwebClient }: AppProps) {
         error?.toString() || 
         '';
       
-      // Check if it's a network/RPC error
+      const isNoResponse = errorMessage.includes('No response');
       const isNetworkError = 
         errorMessage.includes('Failed to fetch') ||
         errorMessage.includes('fetch failed') ||
@@ -1946,16 +1965,18 @@ export default function App({ thirdwebClient }: AppProps) {
         errorMessage.includes('timeout') ||
         errorMessage.includes('ECONNREFUSED') ||
         errorMessage.includes('ENOTFOUND') ||
-        error?.name === 'TypeError' && errorMessage.includes('fetch');
+        (error?.name === 'TypeError' && errorMessage.includes('fetch'));
       
-      if (isNetworkError) {
+      if (isNoResponse || isNetworkError) {
         console.error("Network error paying revenue:", error);
         notifyError(
-          'Network Error', 
-          'Failed to connect to the blockchain network. Please check your internet connection and try again. If the problem persists, the RPC endpoint may be temporarily unavailable.'
+          isNoResponse ? 'No Response' : 'Network Error',
+          isNoResponse
+            ? 'The network did not respond. Please try again in a moment. If it keeps failing, the RPC may be busy.'
+            : 'Failed to connect to the blockchain network. Please check your connection and try again.'
         );
       } else {
-      console.error("Error paying revenue:", error);
+        console.error("Error paying revenue:", error);
         notifyError('Payment Failed', errorMessage || "Failed to pay revenue. Please try again.");
       }
     } finally {
