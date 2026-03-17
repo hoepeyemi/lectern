@@ -1,0 +1,9 @@
+"use strict";
+// This file is deprecated - Story Protocol SDK is not used in the current implementation
+// If you need to create NFT collections, use the Lectern (ModredIP) contract directly
+Object.defineProperty(exports, "__esModule", { value: true });
+const main = async function () {
+    console.log('⚠️ This script is deprecated. Story Protocol SDK is not used in the current implementation.');
+    console.log('Use the Lectern (ModredIP) contract directly for IP asset registration.');
+};
+main();
