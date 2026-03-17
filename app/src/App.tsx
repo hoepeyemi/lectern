@@ -2893,7 +2893,7 @@ export default function App({ thirdwebClient }: AppProps) {
                   </linearGradient>
                 </defs>
               </svg>
-              <h1>Loom IP</h1>
+              <h1>Lectern</h1>
             </div>
             <div className="header-actions">
               <div className={`status-indicator ${backendStatus ? 'connected' : 'disconnected'}`}>
@@ -3151,7 +3151,7 @@ export default function App({ thirdwebClient }: AppProps) {
                 </linearGradient>
               </defs>
             </svg>
-            <h1>Loom IP</h1>
+            <h1>Lectern</h1>
           </div>
           <div className="header-actions">
             <div className={`status-indicator ${backendStatus ? 'connected' : 'disconnected'}`}>
