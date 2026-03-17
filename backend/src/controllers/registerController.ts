@@ -7,8 +7,10 @@ import { convertBigIntsToStrings } from '../utils/bigIntSerializer';
 const handleRegistration = async (req: Request, res: Response) => {
   console.log("🔥 Entered handleRegistration");
   try {
-    const { ipHash, metadata, isEncrypted, lecternContractAddress, modredIpContractAddress, skipContractCall } = req.body;
+    const { ipHash, metadata, tokenUri, isEncrypted, lecternContractAddress, modredIpContractAddress, skipContractCall } = req.body;
     const contractAddress = lecternContractAddress || modredIpContractAddress;
+    // tokenUri (IPFS metadata URL) is stored on-chain so Blockscout can fetch and show the image; fallback to metadata for backward compat
+    const contractMetadata = tokenUri ?? metadata;
     console.log("📦 Received body:", req.body);
 
     // Validate required parameters
@@ -53,7 +55,7 @@ const handleRegistration = async (req: Request, res: Response) => {
     let explorerUrl: string | null = null;
 
     try {
-      const result = await registerIpOnChain(ipHash, metadata, isEncrypted, contractAddress as Address);
+      const result = await registerIpOnChain(ipHash, contractMetadata, isEncrypted, contractAddress as Address);
       if (!result) throw new Error('Registration returned no result');
       txHash = result.txHash;
       ipAssetId = result.ipAssetId;

@@ -1126,24 +1126,17 @@ export default function App({ thirdwebClient }: AppProps) {
     };
   };
 
-  // Load accumulated royalties for a token
+  // Load accumulated royalties for a token (via viem public client for reliable RPC)
   const loadAccumulatedRoyalties = async (tokenId: number) => {
     if (!account?.address) return;
 
     try {
-      const contract = getContract({
+      const royaltyInfo = await polkadotHubPublicClient.readContract({
+        address: MODRED_IP_ADDRESS,
         abi: MODRED_IP_ABI,
-        client: thirdwebClient,
-        chain: defineChain(polkadotHubTestnet.id),
-        address: CONTRACT_ADDRESSES["ModredIPModule#ModredIP"],
+        functionName: "getRoyaltyInfo",
+        args: [BigInt(tokenId), account.address as `0x${string}`],
       });
-
-      // Get royalty info for the connected account
-      const royaltyInfo = await readContract({
-        contract,
-        method: "getRoyaltyInfo" as any,
-        params: [BigInt(tokenId), account.address],
-      }) as readonly [bigint, bigint, bigint, bigint];
 
       const claimableAmount = royaltyInfo[1]; // claimableAmount_
       setAccumulatedRoyalties((prev) => {
@@ -1152,8 +1145,7 @@ export default function App({ thirdwebClient }: AppProps) {
         return newMap;
       });
     } catch (error: any) {
-      // Silently handle errors (e.g., if no royalties exist)
-      console.log('No royalties found or error loading:', error);
+      console.log("No royalties found or error loading:", error);
       setAccumulatedRoyalties((prev) => {
         const newMap = new Map(prev);
         newMap.set(tokenId, 0n);
@@ -1520,13 +1512,13 @@ export default function App({ thirdwebClient }: AppProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ipAssets]);
 
-  // Create standardized NFT metadata
+  // Create standardized NFT metadata (ERC-721 / Blockscout compatible: image must be a resolvable URI)
   const createNFTMetadata = async (ipHash: string, name: string, description: string, isEncrypted: boolean) => {
-    // Generate metadata object
+    const imageUri = ipHash.startsWith("ipfs://") ? ipHash : `ipfs://${ipHash}`;
     const metadata = {
-      name: name || `IP Asset #${Date.now()}`, // Use provided name or generate unique name
+      name: name || `IP Asset #${Date.now()}`,
       description: description || "No description provided",
-      image: ipHash, // Use IPFS hash as image reference
+      image: imageUri,
       properties: {
         ipHash,
         name: name || "Unnamed",
@@ -1617,8 +1609,7 @@ export default function App({ thirdwebClient }: AppProps) {
       //   ]
       // };
 
-      // Call backend API
-      // Note: If contract doesn't have registerIP function, set skipContractCall: true to test IPFS upload
+      // Call backend API. tokenUri is stored on-chain (tokenURI()) so Blockscout can fetch and show image.
       const response = await fetch(`${BACKEND_URL}/api/register`, {
         method: 'POST',
         headers: {
@@ -1626,10 +1617,11 @@ export default function App({ thirdwebClient }: AppProps) {
         },
         body: JSON.stringify({
           ipHash: ipHash,
+          tokenUri: metadataUri,
           metadata: JSON.stringify(ipMetadata),
           isEncrypted: isEncrypted,
           lecternContractAddress: CONTRACT_ADDRESSES["ModredIPModule#ModredIP"],
-          skipContractCall: false // V2 contract has registerIP function, so this should be false
+          skipContractCall: false
         })
       });
 
@@ -1953,7 +1945,7 @@ export default function App({ thirdwebClient }: AppProps) {
     }
   };
 
-  // Claim Royalties
+  // Claim Royalties (via viem walletClient.writeContract + our RPC for wait, like pay revenue)
   const claimRoyalties = async () => {
     if (!account?.address) {
       notifyError("Wallet Not Connected", "Please connect your wallet");
@@ -1962,51 +1954,40 @@ export default function App({ thirdwebClient }: AppProps) {
 
     try {
       setLoading(true);
-      notifyInfo('Claiming Royalties', 'Processing royalty claim...');
+      notifyInfo("Claiming Royalties", "Processing royalty claim...");
 
-        const contract = getContract({
+      const ethereum = typeof window !== "undefined" ? (window as unknown as { ethereum?: unknown }).ethereum : null;
+      if (!ethereum) throw new Error("No wallet found. Please install MetaMask or another Web3 wallet.");
+
+      const walletClient = createWalletClient({
+        chain: polkadotHubChain,
+        transport: custom(ethereum as import("viem").EIP1193Provider),
+      });
+      const jsonRpcAccount = { address: account.address as `0x${string}`, type: "json-rpc" as const };
+
+      const hash = await walletClient.writeContract({
+        address: MODRED_IP_ADDRESS,
         abi: MODRED_IP_ABI,
-          client: thirdwebClient,
-          chain: defineChain(polkadotHubTestnet.id),
-        address: CONTRACT_ADDRESSES["ModredIPModule#ModredIP"],
-        });
-
-      const preparedCall = await prepareContractCall({
-          contract,
-        method: "claimRoyalties",
-        params: [BigInt(claimTokenId)],
-        });
-
-      const transaction = await sendTransaction({
-        transaction: preparedCall,
-        account: account,
+        functionName: "claimRoyalties",
+        args: [BigInt(claimTokenId)],
+        account: jsonRpcAccount,
       });
 
-      await waitForReceipt({
-        client: thirdwebClient,
-        chain: defineChain(polkadotHubTestnet.id),
-        transactionHash: transaction.transactionHash,
-      });
+      await polkadotHubPublicClient.waitForTransactionReceipt({ hash });
 
-            // Show success notification with amount
       const claimedAmount = accumulatedRoyalties.get(claimTokenId) || 0n;
-      notifySuccess('Royalties Claimed', `Successfully claimed ${formatEther(claimedAmount)} PAS!`);
+      notifySuccess("Royalties Claimed", `Successfully claimed ${formatEther(claimedAmount)} PAS!`);
 
-      // Update accumulated royalties
       setAccumulatedRoyalties((prev) => {
         const newMap = new Map(prev);
         newMap.set(claimTokenId, 0n);
         return newMap;
       });
 
-      // Reload data
       await loadContractData();
-      
-      // Reload accumulated royalties
       if (claimTokenId) {
         await loadAccumulatedRoyalties(claimTokenId);
       }
-
     } catch (error: any) {
       // Check for specific error messages in multiple possible locations
       const errorMessage = 
