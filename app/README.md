@@ -142,9 +142,15 @@ A React-based frontend for the Lectern intellectual property management system o
 
 - **Blockchain**: Polkadot Hub Testnet (Chain ID: 420420417)
 - **Smart Contract**: ModredIP (Lectern)
-- **Wallet Integration**: Thirdweb SDK
-- **IPFS**: Used for storing IP content, metadata, and license terms
-- **ERC-6551**: Token-bound accounts for IP management
+- **Wallet**: Thirdweb SDK (ConnectButton, useActiveAccount). Chain: Polkadot Hub Testnet.
+- **On-chain reads & writes**: **Viem** is used for reliability on Polkadot Hub:
+  - **IP assets & licenses**: Loaded via `createPublicClient` + `http()` to `https://services.polkadothub-rpc.com/testnet` so lists and claimable amounts load even when Thirdweb RPC returns "No response".
+  - **Pay revenue**: `createWalletClient` + `custom(window.ethereum)` then `writeContract` (wallet sends tx); receipt wait via the same public client.
+  - **Claim royalties**: Same pattern—wallet `writeContract` for `claimRoyalties(tokenId)`, then public client `waitForTransactionReceipt`.
+- **IPFS**: Used for IP content, metadata, and license terms (Pinata via backend).
+- **ERC-6551**: Token-bound accounts for IP management.
+- **Logo & favicon**: `public/lectern.png` is used as the header logo and in `index.html` as favicon, apple-touch-icon, and og/twitter image.
+- **Blockscout image**: On register, the app sends **tokenUri** (IPFS URL of the NFT metadata JSON) to the backend; the contract stores this so `tokenURI(tokenId)` returns a URL and Blockscout can fetch the metadata and display the image.
 
 ## Contract Addresses
 
@@ -153,7 +159,7 @@ Current deployed contract addresses are stored in `src/deployed_addresses.json`:
 - **ERC6551Registry**: `0xC9Dcb6910D59417B7227562eFB0776c7C3c0c280`
 - **ERC6551Account**: `0xec79fC54BCb5D41Db79552c1c463FFC33479Be03`
 
-**Note**: The contract key "ModredIPModule#ModredIP" is maintained for compatibility, but the application name is "Lectern".
+**Note**: The contract key "ModredIPModule#ModredIP" is maintained for compatibility; the application name is "Lectern". Addresses are synced from `ignition/deployments/chain-420420417/deployed_addresses.json` on `yarn install` (postinstall script).
 
 ## Security Features
 

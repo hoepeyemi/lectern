@@ -12,6 +12,7 @@ Decentralized intellectual property management on **Polkadot Hub Testnet**: regi
 ## Table of Contents
 
 - [Project Structure](#project-structure)
+- [Implementation Summary](#implementation-summary)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Environment Variables](#environment-variables)
@@ -48,6 +49,17 @@ lectern/
 ├── PROJECT_DETAILS.md      # Vision, team, roadmap
 └── README.md               # This file
 ```
+
+---
+
+## Implementation Summary
+
+- **Network:** Polkadot Hub Testnet (Chain ID 420420417). RPC: `https://services.polkadothub-rpc.com/testnet`. Explorer: Blockscout.
+- **Frontend (app):** React 18 + Vite + TypeScript. **Thirdweb** for wallet connect (ConnectButton, useActiveAccount). **Viem** for reliable on-chain reads and writes: `createPublicClient` (Polkadot Hub RPC) loads IP assets and licenses; `createWalletClient` (injected provider) used for pay revenue and claim royalties so transactions succeed without Thirdweb RPC "No response" issues. Logo and favicon: `app/public/lectern.png` (used in headers and `index.html`).
+- **Backend:** Node.js + Express + **Viem**. Registers IP on-chain (ModredIP), mints licenses, uses **Pinata** for IPFS. **Yakoa** integration for infringement (only when receipt is confirmed; skips when receipt times out). Priority fee (e.g. 2 gwei) for Polkadot Hub; 5-minute receipt timeout with success response when tx is submitted but receipt pending.
+- **Contracts:** ModredIP (ERC-721 + ERC-6551), ERC6551Registry, ERC6551Account. Deployed via Hardhat Ignition; addresses in `ignition/deployments/chain-420420417/deployed_addresses.json` and copied to `app/src/deployed_addresses.json` on app install.
+- **IP registration:** App uploads NFT metadata JSON to IPFS and sends **tokenUri** (e.g. `ipfs://...`) to the backend; contract stores this so `tokenURI(tokenId)` returns a URL and Blockscout can fetch and display the image.
+- **Branding:** Application name "Lectern" everywhere (no Loom/CTC/Fufu). API accepts `lecternContractAddress` (legacy `modredIpContractAddress` supported).
 
 ---
 

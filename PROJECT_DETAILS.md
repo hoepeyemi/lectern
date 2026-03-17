@@ -8,7 +8,7 @@ This document contains the full project description, vision, business model, tea
 
 Lectern is a decentralized intellectual property (IP) management platform built on Polkadot Hub Testnet. Creators can register IP assets as token-bound accounts (ERC-6551), mint licenses with programmable terms and royalties, receive and distribute revenue on-chain, and resolve disputes through an arbitration system. The platform uses IPFS for storage, integrates AI-powered infringement detection (Yakoa), and offers transfer and gifting of IP assets with full on-chain provenance.
 
-**Tech stack:** React 18, TypeScript, Vite, Thirdweb SDK (frontend); Node.js, Express, Viem (backend); Solidity, Hardhat, Hardhat Ignition (contracts); Polkadot Hub Testnet; IPFS/Pinata; Yakoa.
+**Tech stack:** React 18, TypeScript, Vite, Thirdweb SDK (wallet) + Viem (on-chain reads/writes for Polkadot Hub); Node.js, Express, Viem (backend); Solidity, Hardhat, Hardhat Ignition (contracts); Polkadot Hub Testnet; IPFS/Pinata; Yakoa. NFT metadata is stored on-chain via `tokenURI` (IPFS URL) for Blockscout display.
 
 ---
 

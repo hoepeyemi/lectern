@@ -18,9 +18,17 @@ Create a `.env` file in the backend directory:
 
 ```env
 WALLET_PRIVATE_KEY=your_private_key_here
-RPC_PROVIDER_URL=https://services.polkadothub-rpc.com/testnet
-NFT_CONTRACT_ADDRESS=optional_nft_contract_address
+PINATA_JWT=your_pinata_jwt
+# Optional: Yakoa (infringement)
+YAKOA_API_KEY=your_yakoa_api_key
+YAKOA_SUBDOMAIN=your_subdomain
+YAKOA_NETWORK=your_network
+# Optional: frontend / CORS
+FRONTEND_URL=https://your-frontend.vercel.app
+NODE_ENV=production
 ```
+
+RPC for Polkadot Hub Testnet is configured in code (`https://services.polkadothub-rpc.com/testnet`). No need to set `RPC_PROVIDER_URL` unless you override it.
 
 ## API Endpoints
 
@@ -30,14 +38,17 @@ NFT_CONTRACT_ADDRESS=optional_nft_contract_address
   ```json
   {
     "ipHash": "ipfs://Qm...",
+    "tokenUri": "ipfs://QmMetadataCid...",
     "metadata": "{\"name\":\"IP Asset Name\",\"description\":\"...\",...}",
     "isEncrypted": false,
     "lecternContractAddress": "0x5829940874605d61496CE818914B972c507E55c7",
     "skipContractCall": false
   }
   ```
-- **Response**: Returns transaction hash, IP asset ID, block number, and explorer URL
-- **Note**: Supports legacy `modredIpContractAddress` parameter for backward compatibility
+- **tokenUri** (optional): IPFS URL of the NFT metadata JSON. When provided, this is stored on-chain so `tokenURI(tokenId)` returns a URL and Blockscout can show the image. If omitted, `metadata` is sent to the contract (backward compatible).
+- **metadata**: Full JSON string used for Yakoa and internal use; can be the same as the JSON at `tokenUri` or a richer payload.
+- **Response**: Returns transaction hash, IP asset ID, block number, explorer URL. On receipt timeout (5 min), returns success with tx hash and explorer URL; Yakoa registration is skipped when block number is unavailable.
+- **Note**: Supports legacy `modredIpContractAddress` parameter for backward compatibility.
 
 ### License Minting
 - **POST** `/api/license/mint`
@@ -104,10 +115,18 @@ The backend includes automatic retry logic for blockchain transactions:
 5. **Transaction Reliability**: Automatic retry with nonce management
 6. **Error Handling**: Comprehensive error messages and recovery
 
+## Implementation Notes
+
+- **Polkadot Hub**: All chain calls use Polkadot Hub Testnet (Chain ID 420420417). Priority fee (e.g. 2 gwei) is set on write transactions to satisfy the network.
+- **Receipt timeout**: Wait for transaction receipt uses a 5-minute timeout. If the RPC does not return a receipt in time, the API still returns success with the transaction hash and explorer URL so the user can confirm on Blockscout; `ipAssetId`/`blockNumber` may be null in that case.
+- **Yakoa**: Registration to Yakoa runs only when the on-chain registration succeeded and we have `blockNumber` and `txHash` (skipped when receipt timed out or contract call was skipped).
+- **Token URI**: When the client sends `tokenUri` (IPFS metadata URL), it is passed to the contract so Blockscout can display the NFT image.
+
 ## Recent Updates
 
-- ✅ Application branded as "Lectern" (contract key ModredIPModule#ModredIP kept for compatibility)
-- ✅ Added license validation (one license per IP)
-- ✅ Improved nonce handling with retry logic
-- ✅ Enhanced error messages and user feedback
-- ✅ Updated contract address (0x5829940874605d61496CE818914B972c507E55c7) 
+- ✅ Lectern branding; API uses `lecternContractAddress` (legacy `modredIpContractAddress` supported)
+- ✅ License validation (one license per IP)
+- ✅ Nonce handling with retry logic; priority fee for Polkadot Hub
+- ✅ Receipt timeout (5 min) with success response when tx submitted; Yakoa skipped when block number unavailable
+- ✅ `tokenUri` support for Blockscout NFT image display
+- ✅ Contract address (ModredIP): `0x5829940874605d61496CE818914B972c507E55c7` 

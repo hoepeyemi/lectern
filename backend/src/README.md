@@ -1,5 +1,7 @@
 # Story TypeScript SDK Examples
 
+**Context:** The Lectern backend runs on **Polkadot Hub Testnet** and uses **Viem** for all on-chain calls (register, license, Yakoa when receipt is confirmed). The controllers in this repo call the ModredIP contract and optional Yakoa; the scripts below are Story SDK examples for reference.
+
 ## Get Started
 
 1. Install the dependencies:
