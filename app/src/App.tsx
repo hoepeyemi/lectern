@@ -9,7 +9,6 @@ import "./components/IPPortfolio.css";
 import {
   createPublicClient,
   createWalletClient,
-  encodeFunctionData,
   http,
   custom,
   parseEther,
@@ -1886,55 +1885,25 @@ export default function App({ thirdwebClient }: AppProps) {
       
       notifyInfo('Processing Payment', `Paying ${paymentAmount} PAS in revenue...`);
 
-      // Use viem + Polkadot Hub RPC: prepare tx with our client, sign with wallet, broadcast with our client (avoids Thirdweb "No response")
+      // Use viem walletClient.writeContract (eth_sendTransaction - supported by MetaMask); then wait via our RPC
       const ethereum = typeof window !== "undefined" ? (window as unknown as { ethereum?: unknown }).ethereum : null;
       if (!ethereum) throw new Error("No wallet found. Please install MetaMask or another Web3 wallet.");
-
-      const data = encodeFunctionData({
-        abi: MODRED_IP_ABI,
-        functionName: "payRevenue",
-        args: [BigInt(paymentTokenId)],
-      });
-      const value = parseEther(paymentAmount);
-
-      const gas = await polkadotHubPublicClient.estimateContractGas({
-        address: MODRED_IP_ADDRESS,
-        abi: MODRED_IP_ABI,
-        functionName: "payRevenue",
-        args: [BigInt(paymentTokenId)],
-        value,
-        account: account.address as `0x${string}`,
-      });
-      const nonce = await polkadotHubPublicClient.getTransactionCount({
-        address: account.address as `0x${string}`,
-      });
-      const feeData = await polkadotHubPublicClient.estimateFeesPerGas().catch(() => null);
-      const maxFeePerGas = feeData?.maxFeePerGas ?? BigInt(2e9);
-      const maxPriorityFeePerGas = feeData?.maxPriorityFeePerGas ?? BigInt(2e9);
-
-      const request = {
-        to: MODRED_IP_ADDRESS,
-        data,
-        value,
-        gas,
-        nonce,
-        chainId: polkadotHubChain.id,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-      };
 
       const walletClient = createWalletClient({
         chain: polkadotHubChain,
         transport: custom(ethereum as import("viem").EIP1193Provider),
       });
       const jsonRpcAccount = { address: account.address as `0x${string}`, type: "json-rpc" as const };
-      const serializedTx = await walletClient.signTransaction({
+
+      const hash = await walletClient.writeContract({
+        address: MODRED_IP_ADDRESS,
+        abi: MODRED_IP_ABI,
+        functionName: "payRevenue",
+        args: [BigInt(paymentTokenId)],
+        value: parseEther(paymentAmount),
         account: jsonRpcAccount,
-        ...request,
       });
-      const hash = await polkadotHubPublicClient.sendRawTransaction({
-        serializedTransaction: serializedTx,
-      });
+
       await polkadotHubPublicClient.waitForTransactionReceipt({ hash });
 
       // Show success notification
