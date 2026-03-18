@@ -42,6 +42,7 @@ Lectern is a decentralized intellectual property (IP) management platform built 
 ## Roadmap
 
 - **Phase 1 (Foundation)** – ✅ Smart contracts, frontend, backend, IPFS, Yakoa, arbitration
+- **Phase 2 (Launch & hardening)** – ✅ Testnet launch, documentation, deployment automation, first users
 - **Phase 3 (Advanced)** – ✅ License templates, royalty preview, infringement dashboard; 🚧 Mobile, API
 - **Phase 4+** – Marketplace, analytics, multi-chain, enterprise
 

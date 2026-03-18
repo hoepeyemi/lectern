@@ -39,6 +39,7 @@ We are committed to building in the open, putting creators first, and delivering
 | Phase | Scope | Status |
 |-------|--------|--------|
 | **Phase 1 – Foundation** | Smart contracts (ModredIP, ERC-6551), frontend, backend, IPFS, Yakoa infringement, arbitration | ✅ Done |
+| **Phase 2 – Launch & hardening** | Testnet launch, documentation, deployment automation, first users | ✅ Done |
 | **Phase 3 – Advanced** | License templates, royalty preview, infringement dashboard | ✅ Done |
 | | Mobile, public API | 🚧 In progress |
 | **Phase 4+** | Marketplace, analytics, multi-chain, enterprise | Planned |
