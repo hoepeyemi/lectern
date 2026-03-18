@@ -189,7 +189,15 @@ Set the backend URL in the app (e.g. in `app/src/App.tsx` or via env). Default i
 - **Explorer:** https://blockscout-testnet.polkadot.io/  
 - **Native token:** PAS  
 
-Contract addresses are in `app/src/deployed_addresses.json` (copied from `ignition/deployments/chain-420420417/deployed_addresses.json` on `yarn install` in `app/`).
+### Deployed contracts (Polkadot Hub Testnet)
+
+| Contract key | Role | Address |
+|--------------|------|---------|
+| **ModredIPModule#ModredIP** | Lectern main contract (ERC-721, IP registration, licenses, royalties, disputes) | `0x5829940874605d61496CE818914B972c507E55c7` |
+| **ModredIPModule#ERC6551Registry** | ERC-6551 registry (token-bound accounts) | `0xC9Dcb6910D59417B7227562eFB0776c7C3c0c280` |
+| **ModredIPModule#ERC6551Account** | ERC-6551 account implementation | `0xec79fC54BCb5D41Db79552c1c463FFC33479Be03` |
+
+Addresses are stored in `app/src/deployed_addresses.json` (synced from `ignition/deployments/chain-420420417/deployed_addresses.json` on `yarn install` in `app/`). To redeploy or use another network, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ---
 
