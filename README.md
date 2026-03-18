@@ -11,6 +11,7 @@ Decentralized intellectual property management on **Polkadot Hub Testnet**: regi
 
 ## Table of Contents
 
+- [Vision & Commitment](#vision--commitment)
 - [Project Structure](#project-structure)
 - [Implementation Summary](#implementation-summary)
 - [Prerequisites](#prerequisites)
@@ -19,6 +20,21 @@ Decentralized intellectual property management on **Polkadot Hub Testnet**: regi
 - [Scripts](#scripts)
 - [Documentation](#documentation)
 - [License](#license)
+
+---
+
+## Vision & Commitment
+
+**Vision**  
+To democratize intellectual property management by creating a decentralized, transparent, and automated platform that empowers creators to protect, monetize, and manage their IP assets with unprecedented efficiency.
+
+**Mission**  
+Lectern revolutionizes IP management by combining blockchain technology with AI-powered infringement detection, creating a comprehensive ecosystem where creators can register, license, monetize, and protect their intellectual property with built-in enforcement mechanisms.
+
+**Commitment**  
+We are committed to building in the open, putting creators first, and delivering a public-good infrastructure for IP on Polkadot Hub: transparent on-chain provenance, fair royalty flows, and enforceable rights without gatekeepers. We ship iteratively, document clearly, and welcome contributions that align with this mission.
+
+For more on team, roadmap, and business context, see [PROJECT_DETAILS.md](PROJECT_DETAILS.md).
 
 ---
 

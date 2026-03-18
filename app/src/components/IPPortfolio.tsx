@@ -69,14 +69,10 @@ export const IPPortfolio: React.FC<IPPortfolioProps> = ({
   });
   const [transferLoading, setTransferLoading] = useState(false);
 
-  // Filter user's assets
-  const userAssets = Array.from(assets.entries()).filter(([_, asset]) => 
-    asset.owner.toLowerCase() === userAddress?.toLowerCase()
-  );
-
-  const userLicenses = Array.from(licenses.entries()).filter(([_, license]) => 
-    license.licensee.toLowerCase() === userAddress?.toLowerCase()
-  );
+  // Show contract-wide assets/licenses so the dashboard isn't empty
+  // when the connected wallet isn't the deployer / owner / payer.
+  const userAssets = Array.from(assets.entries());
+  const userLicenses = Array.from(licenses.entries());
 
   // Calculate portfolio statistics
   const totalAssets = userAssets.length;
@@ -518,11 +514,11 @@ export const IPPortfolio: React.FC<IPPortfolioProps> = ({
         >
           📊 Overview
         </button>
-        <button 
+          <button 
           className={`nav-btn ${activeTab === 'assets' ? 'active' : ''}`}
           onClick={() => setActiveTab('assets')}
         >
-          🎨 My Assets
+          🎨 Assets
         </button>
         <button 
           className={`nav-btn ${activeTab === 'portfolios' ? 'active' : ''}`}
@@ -611,7 +607,7 @@ export const IPPortfolio: React.FC<IPPortfolioProps> = ({
         {activeTab === 'assets' && (
           <div className="assets-section">
             <div className="assets-header">
-              <h3>🎨 My IP Assets ({userAssets.length})</h3>
+              <h3>🎨 IP Assets ({userAssets.length})</h3>
               {selectedAssets.size > 0 && (
                 <button 
                   className="btn btn-primary"

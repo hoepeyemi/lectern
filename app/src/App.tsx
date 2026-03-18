@@ -1014,6 +1014,7 @@ export default function App({ thirdwebClient }: AppProps) {
 
   const [royaltyBreakdown, setRoyaltyBreakdown] = useState<RoyaltyBreakdown | null>(null);
   const [accumulatedRoyalties, setAccumulatedRoyalties] = useState<Map<number, bigint>>(new Map()); // tokenId => claimable amount
+  const [royaltyTotals, setRoyaltyTotals] = useState<Map<number, bigint>>(new Map()); // tokenId => totalAccumulated (independent of claimant)
 
   // Load IP assets via viem public client (Polkadot Hub RPC) for reliable reads; same pattern as Wagmi
   const loadIpAssetsViaViem = async () => {
@@ -1128,9 +1129,35 @@ export default function App({ thirdwebClient }: AppProps) {
 
   // Load accumulated royalties for a token (via viem public client for reliable RPC)
   const loadAccumulatedRoyalties = async (tokenId: number) => {
-    if (!account?.address) return;
-
     try {
+      const ZERO = "0x0000000000000000000000000000000000000000";
+
+      // totalAccumulated_ is stored on the token's RoyaltyVault and does not depend on claimant.
+      // We can query it using a dummy claimant address.
+      const totalRoyaltyInfo = await polkadotHubPublicClient.readContract({
+        address: MODRED_IP_ADDRESS,
+        abi: MODRED_IP_ABI,
+        functionName: "getRoyaltyInfo",
+        args: [BigInt(tokenId), ZERO as `0x${string}`],
+      });
+
+      const totalAccumulatedAmount = totalRoyaltyInfo[3]; // totalAccumulated_
+      setRoyaltyTotals((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(tokenId, totalAccumulatedAmount);
+        return newMap;
+      });
+
+      // claimableAmount_ depends on claimant. If no wallet is connected, treat as 0.
+      if (!account?.address) {
+        setAccumulatedRoyalties((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(tokenId, 0n);
+          return newMap;
+        });
+        return;
+      }
+
       const royaltyInfo = await polkadotHubPublicClient.readContract({
         address: MODRED_IP_ADDRESS,
         abi: MODRED_IP_ABI,
@@ -1146,6 +1173,11 @@ export default function App({ thirdwebClient }: AppProps) {
       });
     } catch (error: any) {
       console.log("No royalties found or error loading:", error);
+      setRoyaltyTotals((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(tokenId, 0n);
+        return newMap;
+      });
       setAccumulatedRoyalties((prev) => {
         const newMap = new Map(prev);
         newMap.set(tokenId, 0n);
@@ -1474,7 +1506,6 @@ export default function App({ thirdwebClient }: AppProps) {
 
   // Load contract data (licenses via viem; IP assets loaded separately via loadIpAssetsViaViem)
   const loadContractData = async () => {
-    if (!account?.address) return;
     try {
       setLoading(true);
       await loadLicensesViaViem();
@@ -1487,11 +1518,10 @@ export default function App({ thirdwebClient }: AppProps) {
   };
 
   useEffect(() => {
-    if (account?.address) {
-      loadContractData();
-      loadIpAssetsViaViem();
-    }
-  }, [account?.address]);
+    loadContractData();
+    loadIpAssetsViaViem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-load infringement status for all IP assets when the list is loaded
   useEffect(() => {
@@ -1847,7 +1877,7 @@ export default function App({ thirdwebClient }: AppProps) {
 
   // Load accumulated royalties when claim token changes
   useEffect(() => {
-    if (claimTokenId && account?.address) {
+    if (claimTokenId) {
       loadAccumulatedRoyalties(claimTokenId);
     }
   }, [claimTokenId, account?.address]);
@@ -3869,15 +3899,15 @@ export default function App({ thirdwebClient }: AppProps) {
               </select>
             </div>
 
-            {/* Accumulated Royalties Display */}
-            {account?.address && accumulatedRoyalties.has(claimTokenId) && (
+            {/* Total royalties are token-wide and visible regardless of who is connected */}
+            {(royaltyTotals.has(claimTokenId) || accumulatedRoyalties.has(claimTokenId)) && (
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <div style={{
                   padding: '1rem',
-                  backgroundColor: accumulatedRoyalties.get(claimTokenId)! > 0n
+                  backgroundColor: (royaltyTotals.get(claimTokenId) ?? 0n) > 0n
                     ? 'var(--color-success-bg, #d4edda)'
                     : 'var(--color-info-bg, #d1ecf1)',
-                  border: `1px solid ${accumulatedRoyalties.get(claimTokenId)! > 0n
+                  border: `1px solid ${((royaltyTotals.get(claimTokenId) ?? 0n) > 0n)
                     ? 'var(--color-success-border, #28a745)'
                     : 'var(--color-info-border, #0c5460)'}`,
                   borderRadius: '8px',
@@ -3893,33 +3923,42 @@ export default function App({ thirdwebClient }: AppProps) {
                       margin: 0,
                       fontSize: '1rem',
                       fontWeight: 600,
-                      color: accumulatedRoyalties.get(claimTokenId)! > 0n
+                      color: (royaltyTotals.get(claimTokenId) ?? 0n) > 0n
                         ? '#155724'
                         : '#0c5460',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem'
                     }}>
-                      💰 Accumulated Royalties
+                      💰 Total Accumulated Royalties
                     </h3>
                     <span style={{
                       fontSize: '1.25rem',
                       fontWeight: 700,
-                      color: accumulatedRoyalties.get(claimTokenId)! > 0n
+                      color: (royaltyTotals.get(claimTokenId) ?? 0n) > 0n
                         ? '#155724'
                         : '#0c5460'
                     }}>
-                      {formatEther(accumulatedRoyalties.get(claimTokenId) || 0n)} PAS
+                      {formatEther(royaltyTotals.get(claimTokenId) || 0n)} PAS
                     </span>
                   </div>
                   
-                  {accumulatedRoyalties.get(claimTokenId)! > 0n ? (
+                  {(royaltyTotals.get(claimTokenId) ?? 0n) > 0n ? (
                     <div style={{
                       fontSize: '0.875rem',
-                      color: '#155724',
+                      color: '#1e293b',
                       opacity: 0.9
                     }}>
-                      ✅ You have claimable royalties for this IP asset. Click "Claim Royalties" to withdraw.
+                      This IP asset has royalties accumulated on-chain.
+                      {account?.address ? (
+                        accumulatedRoyalties.get(claimTokenId)! > 0n ? (
+                          <> ✅ Your connected wallet can claim royalties for this asset.</>
+                        ) : (
+                          <> Your connected wallet currently has no claimable royalties for this asset.</>
+                        )
+                      ) : (
+                        <> Connect a wallet to see your claimable amount.</>
+                      )}
                     </div>
                   ) : (
                     <div style={{
@@ -3931,12 +3970,13 @@ export default function App({ thirdwebClient }: AppProps) {
                     </div>
                   )}
 
-                  {/* Show license details if user has a license */}
-                  {(() => {
+                  {/* Show license details for the connected wallet only */}
+                  {account?.address && (() => {
+                    const userAddress = account.address.toLowerCase();
                     const userLicenses = Array.from(licenses.entries())
                       .filter(([_, license]) => 
                         Number(license.tokenId) === claimTokenId &&
-                        license.licensee.toLowerCase() === account?.address.toLowerCase()
+                        license.licensee.toLowerCase() === userAddress
                       );
                     
                     if (userLicenses.length > 0) {
