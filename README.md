@@ -34,7 +34,16 @@ Lectern revolutionizes IP management by combining blockchain technology with AI-
 **Commitment**  
 We are committed to building in the open, putting creators first, and delivering a public-good infrastructure for IP on Polkadot Hub: transparent on-chain provenance, fair royalty flows, and enforceable rights without gatekeepers. We ship iteratively, document clearly, and welcome contributions that align with this mission.
 
-For more on team, roadmap, and business context, see [PROJECT_DETAILS.md](PROJECT_DETAILS.md).
+**Schedule we are committed to**
+
+| Phase | Scope | Status |
+|-------|--------|--------|
+| **Phase 1 – Foundation** | Smart contracts (ModredIP, ERC-6551), frontend, backend, IPFS, Yakoa infringement, arbitration | ✅ Done |
+| **Phase 3 – Advanced** | License templates, royalty preview, infringement dashboard | ✅ Done |
+| | Mobile, public API | 🚧 In progress |
+| **Phase 4+** | Marketplace, analytics, multi-chain, enterprise | Planned |
+
+We are committed to this roadmap: completing in-progress items (mobile, API), then advancing toward Phase 4. For full roadmap and team, see [PROJECT_DETAILS.md](PROJECT_DETAILS.md).
 
 ---
 
